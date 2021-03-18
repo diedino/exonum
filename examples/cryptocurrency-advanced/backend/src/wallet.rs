@@ -35,6 +35,8 @@ pub struct Wallet {
     pub history_len: u64,
     /// `Hash` of the transactions history.
     pub history_hash: Hash,
+    /// Amount freezed by transactions with approve
+    pub freezed_balance: u64,
 }
 
 impl Wallet {
@@ -45,6 +47,7 @@ impl Wallet {
         balance: u64,
         history_len: u64,
         &history_hash: &Hash,
+        freezed_balance: u64,
     ) -> Self {
         Self {
             owner,
@@ -52,6 +55,7 @@ impl Wallet {
             balance,
             history_len,
             history_hash,
+            freezed_balance,
         }
     }
 
@@ -63,6 +67,18 @@ impl Wallet {
             balance,
             self.history_len + 1,
             history_hash,
+            self.freezed_balance,
         )
     }
+
+    /// Returns a copy of this wallet with updated balance.
+    pub fn set_freezed_balance(self, freezed_balance: u64, history_hash: &Hash) -> Self {
+        Self::new(
+            self.owner,
+            &self.name,
+            self.balance,
+            self.history_len + 1,
+            history_hash,
+            freezed_balance,
+        )
 }

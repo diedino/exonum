@@ -28,6 +28,18 @@ message Transfer {
   uint64 seed = 3;
 }
 
+// Transfer with 3rd party approve `amount` of the currency from one wallet to another.
+message TransferApprove {
+  // Address of receiver's wallet.
+  exonum.crypto.Hash to = 1;
+  // Amount of currency to transfer.
+  uint64 amount = 2;
+  // Address of approver's wallet.
+  exonum.crypto.Hash approver = 3;
+  // Auxiliary number to guarantee non-idempotence of transactions.
+  uint64 seed = 4;
+}
+
 // Issue `amount` of the currency to the `wallet`.
 message Issue {
   // Issued amount of currency.
@@ -54,6 +66,8 @@ message Wallet {
   uint64 history_len = 4;
   // `Hash` of the transactions history.
   exonum.crypto.Hash history_hash = 5;
+   // Current freezed balance
+   uint64 freezed_balance = 6;
 }
 
 // Cryptocurrency configuration.

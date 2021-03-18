@@ -88,7 +88,18 @@ where
         let mut history = self.wallet_history.get(&key);
         history.push(transaction);
         let history_hash = history.object_hash();
-        let wallet = Wallet::new(key, name, INITIAL_BALANCE, history.len(), &history_hash);
+        let wallet = Wallet::new(key, name, INITIAL_BALANCE, history.len(), &history_hash, 0);
         self.public.wallets.put(&key, wallet);
+    }
+
+    /// Increases balance of the wallet and append new record to its history.
+    pub fn increase_freezed_wallet_balance(&mut self, wallet: Wallet, amount: u64, transaction: Hash) {
+        let mut history = self.wallet_history.get(&wallet.owner);
+        history.push(transaction);
+        let history_hash = history.object_hash();
+        let freezed_balance = wallet.freezed_balance;
+        let wallet = wallet.set_freezed_balance(freezed_balance + amount, &history_hash);
+        let wallet_key = wallet.owner;
+        self.public.wallets.put(&wallet_key, wallet);
     }
 }
