@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
     NodeBuilder::new()
         // Starts cryptocurrency instance with the default identifiers
         // immediately after genesis block creation.
-        .with(Spec::new(CryptocurrencyService).with_default_instance())
+        //.with(Spec::new(CryptocurrencyService).with_default_instance())
         .run()
         .await
 }

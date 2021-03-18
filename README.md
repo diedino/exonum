@@ -1,5 +1,9 @@
 # Exonum
 
+## Homework
+
+Made by BSE173 Vasiliy Krasnov, BSE175 Danila Krivenkov, BSE173 Artemiy Shirokov
+
 **Status:**
 [![Travis Build Status](https://img.shields.io/travis/exonum/exonum/master.svg?label=Linux)](https://travis-ci.com/exonum/exonum)
 [![dependency status](https://deps.rs/repo/github/exonum/exonum/status.svg)](https://deps.rs/repo/github/exonum/exonum)

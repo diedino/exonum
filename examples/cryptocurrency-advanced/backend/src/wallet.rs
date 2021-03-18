@@ -37,6 +37,8 @@ pub struct Wallet {
     pub history_len: u64,
     /// `Hash` of the transactions history.
     pub history_hash: Hash,
+    /// Amount freezed by transactions with approve
+    pub freezed_balance: u64,
 }
 
 impl Wallet {
@@ -48,6 +50,7 @@ impl Wallet {
         freezed_balance: u64,
         history_len: u64,
         &history_hash: &Hash,
+        freezed_balance: u64,
     ) -> Self {
         Self {
             owner,
@@ -56,6 +59,7 @@ impl Wallet {
             freezed_balance,
             history_len,
             history_hash,
+            freezed_balance,
         }
     }
 
@@ -68,6 +72,7 @@ impl Wallet {
             self.freezed_balance,
             self.history_len + 1,
             history_hash,
+            self.freezed_balance,
         )
     }
     
