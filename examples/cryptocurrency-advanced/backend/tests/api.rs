@@ -35,7 +35,7 @@ use serde_json::json;
 use exonum_cryptocurrency_advanced::{
     api::{WalletInfo, WalletQuery},
     schema::Schema,
-    transactions::{CreateWallet, Transfer, TransferApprove},
+    transactions::{CreateWallet, Transfer, TransferApprove, FinishTransferApprove},
     wallet::Wallet,
     CryptocurrencyInterface, CryptocurrencyService,
 };
@@ -120,10 +120,8 @@ async fn test_transfer() {
     assert_eq!(bob_wallet.balance, 110);
 }
 
-/// Check that the transfer with approve transaction works as intended.
 #[tokio::test]
 async fn test_transfer_with_approve() {
-    // Create 3 wallets.
     let (mut testkit, api) = create_testkit();
     let (tx_alice, alice) = api.create_wallet(ALICE_NAME).await;
     let (tx_bob, _) = api.create_wallet(BOB_NAME).await;
@@ -134,12 +132,11 @@ async fn test_transfer_with_approve() {
     api.assert_tx_status(tx_bob.object_hash(), &json!({ "type": "success" }))
         .await;
     api.assert_tx_status(tx_approver.object_hash(), &json!({ "type": "success" }))
-        .await;
+    .await;
 
-    // Transfer funds by invoking the corresponding API method.
     let tx = alice.create_transfer_with_approve(
         SERVICE_ID,
-        TransferApprove {
+        CreateTransferApprove {
             to: author_address(&tx_bob),
             approver: author_address(&tx_approver),
             amount: 10,
@@ -152,13 +149,36 @@ async fn test_transfer_with_approve() {
     api.assert_tx_status(tx.object_hash(), &json!({ "type": "success" }))
         .await;
 
-    // After the transfer with approve transaction is included into a block,
+    // After the transfer with approve transaction is included into a block, 
     // we may check new wallet freezed and ordinary balances.
     let wallet = api.get_wallet(tx_alice.author()).await.unwrap();
     assert_eq!(wallet.balance, 100);
     assert_eq!(wallet.freezed_balance, 10);
     let wallet = api.get_wallet(tx_bob.author()).await.unwrap();
     assert_eq!(wallet.balance, 100);
+
+    let tx = alice.finish_transfer_with_approve(
+        SERVICE_ID,
+        FinishTransferApprove {
+            to: author_address(&tx_bob),
+            approver: author_address(&tx_approver),
+            amount: 10,
+            seed: 10,
+        },
+    );
+
+    api.transfer(&tx).await;
+    testkit.create_block();
+    api.assert_tx_status(tx.object_hash(), &json!({ "type": "success" }))
+        .await;
+
+    // After the transfer transaction has finished , 
+    // we may check new wallet freezed and ordinary balances.
+    let wallet = api.get_wallet(tx_alice.author()).await.unwrap();
+    assert_eq!(wallet.balance, 90);
+    assert_eq!(wallet.freezed_balance, 0);
+    let wallet = api.get_wallet(tx_bob.author()).await.unwrap();
+    assert_eq!(wallet.balance, 110);
 }
 
 /// Check that a transfer from a non-existing wallet fails as expected.

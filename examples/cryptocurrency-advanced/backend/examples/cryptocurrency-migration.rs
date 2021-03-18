@@ -23,8 +23,6 @@ async fn main() -> anyhow::Result<()> {
     exonum::helpers::init_logger()?;
 
     NodeBuilder::new()
-        .with(Spec::new(OldService).with_default_instance())
-        .with(JustFactory::migrating(CryptocurrencyService))
         .run()
         .await
 }

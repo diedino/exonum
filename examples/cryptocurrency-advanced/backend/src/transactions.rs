@@ -46,13 +46,10 @@ pub enum Error {
     ///
     /// Can be emitted by 'Transfer`.
     SenderSameAsReceiver = 4,
-
     /// Approver doesn't exist.
     ApproverNotFound = 5,
-
     /// Sender are same as approver.
     SenderSameAsApprover = 6,
-
     /// Receiver are same as approver.
     ApproverSameAsReceiver = 7,
 }
@@ -75,8 +72,24 @@ pub struct Transfer {
 /// Transfer with 3rd party approve `amount` of the currency from one wallet to another.
 #[derive(Clone, Debug)]
 #[derive(ProtobufConvert, BinaryValue, ObjectHash)]
-#[protobuf_convert(source = "proto::CreateTransferApprove", serde_pb_convert)]
+#[protobuf_convert(source = "proto::TransferApprove", serde_pb_convert)]
 pub struct TransferApprove {
+    /// Address of receiver's wallet.
+    pub to: Address,
+    /// Amount of currency to transfer.
+    pub amount: u64,
+    /// Address of approver's wallet
+    pub approver: Address,
+    /// Auxiliary number to guarantee [non-idempotence][idempotence] of transactions.
+    ///
+    pub seed: u64,
+}
+
+/// Transfer with 3rd party approve `amount` of the currency from one wallet to another.
+#[derive(Clone, Debug)]
+#[derive(ProtobufConvert, BinaryValue, ObjectHash)]
+#[protobuf_convert(source = "proto::FinishTransferApprove", serde_pb_convert)]
+pub struct FinishTransferApprove {
     /// Address of receiver's wallet.
     pub to: Address,
     /// Amount of currency to transfer.
@@ -135,9 +148,10 @@ pub trait CryptocurrencyInterface<Ctx> {
     /// Creates wallet with the given `name`.
     #[interface_method(id = 2)]
     fn create_wallet(&self, ctx: Ctx, arg: CreateWallet) -> Self::Output;
-    /// Create transfer with approve
     #[interface_method(id = 3)]
     fn create_transfer_with_approve(&self, ctx: Ctx, arg: TransferApprove) -> Self::Output;
+    #[interface_method(id = 4)]
+    fn finish_transfer_with_approve(&self, ctx: Ctx, arg: FinishTransferApprove) -> Self::Output;
 }
 
 impl CryptocurrencyInterface<ExecutionContext<'_>> for CryptocurrencyService {
@@ -155,7 +169,7 @@ impl CryptocurrencyInterface<ExecutionContext<'_>> for CryptocurrencyService {
 
         let sender = schema.wallet(from).ok_or(Error::SenderNotFound)?;
         let receiver = schema.wallet(arg.to).ok_or(Error::ReceiverNotFound)?;
-        if sender.balance < amount {
+        if sender.balance - sender.freezed_balance < amount {
             Err(Error::InsufficientCurrencyAmount.into())
         } else {
             schema.decrease_wallet_balance(sender, amount, tx_hash);
@@ -190,31 +204,63 @@ impl CryptocurrencyInterface<ExecutionContext<'_>> for CryptocurrencyService {
         }
     }
 
-    fn create_transfer_with_approve(&self, ctx: ExecutionContext<'_>, arg: TransferApprove) -> Self::Output {
+    fn create_transfer_with_approve(&self,  context: ExecutionContext<'_>, arg: TransferApprove) -> Self::Output {
         let (from, tx_hash) = extract_info(&context)?;
         let mut schema = SchemaImpl::new(context.service_data());
 
         let to = arg.to;
         let amount = arg.amount;
+        let appr = arg.approver;
         if from == to {
             return Err(Error::SenderSameAsReceiver.into());
         }
-
-        let sender = schema.wallet(from).ok_or(Error::SenderNotFound)?;
-        let receiver = schema.wallet(to).ok_or(Error::ReceiverNotFound)?;
-        let approver = schema.wallet(arg.approver).ok_or(Error::ApproverNotFound)?;
-        if from == approver {
+        if from == appr {
             return Err(Error::SenderSameAsApprover.into());
         }
-        if to == approver {
+        if to == appr {
             return Err(Error::ApproverSameAsReceiver.into());
         }
+
+        let sender = schema.wallet(from).ok_or(Error::SenderNotFound)?;
+        let receiver = schema.wallet(arg.to).ok_or(Error::ReceiverNotFound)?;
         if (sender.balance - sender.freezed_balance) < amount {
             return Err(Error::InsufficientCurrencyAmount.into());
         }
-        //schema.decrease_wallet_balance(receiver, amount, tx_hash);
+
+        let approver = schema.wallet(arg.approver).ok_or(Error::ApproverNotFound)?;
+
         schema.increase_freezed_wallet_balance(sender, amount, tx_hash);
         Ok(())
+    }
+
+    fn finish_transfer_with_approve(&self,  context: ExecutionContext<'_>, arg: FinishTransferApprove) -> Self::Output {
+        let (from, tx_hash) = extract_info(&context)?;
+        let mut schema = SchemaImpl::new(context.service_data());
+
+        let to = arg.to;
+        let amount = arg.amount;
+        let appr = arg.approver;
+        if from == to {
+            return Err(Error::SenderSameAsReceiver.into());
+        }
+        if from == appr {
+            return Err(Error::SenderSameAsApprover.into());
+        }
+        if to == appr {
+            return Err(Error::ApproverSameAsReceiver.into());
+        }
+
+        let sender = schema.wallet(from).ok_or(Error::SenderNotFound)?;
+        let receiver = schema.wallet(arg.to).ok_or(Error::ReceiverNotFound)?;
+        let approver = schema.wallet(arg.approver).ok_or(Error::ApproverNotFound)?;
+
+        if (sender.freezed_balance < amount) || (sender.balance < amount) {
+            return Err(Error::InsufficientCurrencyAmount.into());
+        }
+        schema.freeing_freezed_wallet_balance(sender, amount, tx_hash);
+        schema.increase_wallet_balance(receiver, amount, tx_hash);
+        Ok(())
+
     }
 }
 
