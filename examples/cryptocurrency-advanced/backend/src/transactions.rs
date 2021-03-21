@@ -173,7 +173,7 @@ impl CryptocurrencyInterface<ExecutionContext<'_>> for CryptocurrencyService {
             Err(Error::InsufficientCurrencyAmount.into())
         } else {
             schema.decrease_wallet_balance(sender, amount, tx_hash);
-            schema.increase_wallet_balance(receiver, amount, tx_hash);
+            schema.increase_wallet_balance_approve(receiver, amount, tx_hash);
             Ok(())
         }
     }
@@ -258,7 +258,7 @@ impl CryptocurrencyInterface<ExecutionContext<'_>> for CryptocurrencyService {
             return Err(Error::InsufficientCurrencyAmount.into());
         }
         schema.freeing_freezed_wallet_balance(sender, amount, tx_hash);
-        schema.increase_wallet_balance(receiver, amount, tx_hash);
+        schema.increase_wallet_balance_approve(receiver, amount, tx_hash);
         Ok(())
 
     }

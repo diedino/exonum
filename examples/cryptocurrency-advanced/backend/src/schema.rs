@@ -114,4 +114,14 @@ where
         let wallet_key = wallet.owner;
         self.public.wallets.put(&wallet_key, wallet);
     }
+
+    pub fn increase_wallet_balance_approve(&mut self, wallet: Wallet, amount: u64, transaction: Hash) {
+        let mut history = self.wallet_history.get(&wallet.owner);
+        history.push(transaction);
+        let history_hash = history.object_hash();
+        let balance = wallet.balance;
+        let wallet = wallet.set_balance(balance + amount, &history_hash);
+        let wallet_key = wallet.owner;
+        self.public.wallets.put(&wallet_key, wallet);
+    }
 }
